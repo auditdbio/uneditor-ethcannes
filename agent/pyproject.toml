@@ -1,0 +1,19 @@
+[project]
+name = "agent"
+version = "0.1.0"
+description = "A science chat agent for distilling academic papers."
+dependencies = [
+    "models",
+    "aiohttp",
+    "aiofiles",
+    "jinja2",
+    "python-dotenv"
+]
+
+[project.scripts]
+agent-template = "agent.main:main"
+
+[tool.uv.sources]
+scope_loader = { path = "../scope-loader" }
+taskman = { path = "../taskman" }
+models = { path = "../models" }

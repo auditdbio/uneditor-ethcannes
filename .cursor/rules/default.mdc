@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+When you need to edit .env file, DO NOT TOUCH IT. It exists, but hidden and protected.
+
+You can use .env.example instead to read it or update it. The user will be able to see it and
+fix .env file.
