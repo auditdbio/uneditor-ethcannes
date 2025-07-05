@@ -1,92 +1,90 @@
-import dotenv
-dotenv.load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 from os import getenv
-from enum import Enum
 
-from uagents import Agent, Context, Model
-from uagents.experimental.quota import QuotaProtocol, RateLimit
-from uagents_core.models import ErrorMessage
+from datetime import datetime
+from uuid import uuid4
+from uagents import Agent, Protocol, Context, Model
+from time import sleep
 
-from chat_proto import chat_proto, struct_output_client_proto
-from football import get_team_info, FootballTeamRequest, FootballTeamResponse
+#import the necessary components from the chat protocol
+from uagents_core.contrib.protocols.chat import (
+    ChatAcknowledgement,
+    ChatMessage,
+    TextContent,
+    chat_protocol_spec,
+)
+
 
 SEED_PHRASE = getenv("SEED_PHRASE")
 
 
-agent = Agent(
-    name="football_agent",
-    seed=SEED_PHRASE,
+
+# Intialise agent1
+agent1 = Agent(
+    name="demo_agent",
+    port=8080,
+    endpoint="http://0.0.0.0:8080/submit",
     mailbox=True,
-    port=8000,
-    endpoint=["http://localhost:8000/submit"]
+    seed=SEED_PHRASE
 )
 
-proto = QuotaProtocol(
-    storage_reference=agent.storage,
-    name="Football-Team-Protocol",
-    version="0.1.0",
-    default_rate_limit=RateLimit(window_size_minutes=60, max_requests=30),
-)
+# Store agent2's address (you'll need to replace this with actual address)
+#agent2_address = "agent1qgqaswj7shn5gy90xay2alhs7nl6amj3djt3fkayrv2egc3wv53k2e9tnud"
 
-@proto.on_message(
-    FootballTeamRequest, replies={FootballTeamResponse, ErrorMessage}
-)
-async def handle_request(ctx: Context, sender: str, msg: FootballTeamRequest):
-    ctx.logger.info("Received team info request")
-    try:
-        results = await get_team_info(msg.team_name)
-        ctx.logger.info(f'printing results in function {results}')
-        ctx.logger.info("Successfully fetched team information")
-        await ctx.send(sender, FootballTeamResponse(results=results))
-    except Exception as err:
-        ctx.logger.error(err)
-        await ctx.send(sender, ErrorMessage(error=str(err)))
+# Initialize the chat protocol
+chat_proto = Protocol(spec=chat_protocol_spec)
 
-agent.include(proto, publish_manifest=True)
 
-### Health check related code
-def agent_is_healthy() -> bool:
-    """
-    Implement the actual health check logic here.
-    For example, check if the agent can connect to the AllSports API.
-    """
-    try:
-        import asyncio
-        asyncio.run(get_team_info("Manchester United"))
-        return True
-    except Exception:
-        return False
+#Startup Handler - Print agent details and send initial message
+@agent1.on_event("startup")
+async def startup_handler(ctx: Context):
+    # Print agent details
+    ctx.logger.info(f"My name is {ctx.agent.name} and my address is {ctx.agent.address}")
+    
+    # Send initial message to agent2
+    # initial_message = ChatMessage(
+    #     timestamp=datetime.utcnow(),
+    #     msg_id=uuid4(),
+    #     content=[TextContent(type="text", text="Hello from Agent1!")]
+    # )
+    
+    #await ctx.send(agent2_address, initial_message)
 
-class HealthCheck(Model):
-    pass
+# Message Handler - Process received messages and send acknowledgements
+@chat_proto.on_message(ChatMessage)
+async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
+    for item in msg.content:
+        if isinstance(item, TextContent):
+            # Log received message
+            ctx.logger.info(f"Received message from {sender}: {item.text}")
+            
+            # Send acknowledgment
+            ack = ChatAcknowledgement(
+                timestamp=datetime.utcnow(),
+                acknowledged_msg_id=msg.msg_id
+            )
+            await ctx.send(sender, ack)
+            
+            # Send response message
+            response = ChatMessage(
+                timestamp=datetime.utcnow(),
+                msg_id=uuid4(),
+                content=[TextContent(type="text", text="Hello from Agent1!")]
+            )
+            await ctx.send(sender, response)
 
-class HealthStatus(str, Enum):
-    HEALTHY = "healthy"
-    UNHEALTHY = "unhealthy"
+# Acknowledgement Handler - Process received acknowledgements
+@chat_proto.on_message(ChatAcknowledgement)
+async def handle_acknowledgement(ctx: Context, sender: str, msg: ChatAcknowledgement):
+    ctx.logger.info(f"Received acknowledgement from {sender} for message: {msg.acknowledged_msg_id}")
 
-class AgentHealth(Model):
-    agent_name: str
-    status: HealthStatus
 
-health_protocol = QuotaProtocol(
-    storage_reference=agent.storage, name="HealthProtocol", version="0.1.0"
-)
 
-@health_protocol.on_message(HealthCheck, replies={AgentHealth})
-async def handle_health_check(ctx: Context, sender: str, msg: HealthCheck):
-    status = HealthStatus.UNHEALTHY
-    try:
-        if agent_is_healthy():
-            status = HealthStatus.HEALTHY
-    except Exception as err:
-        ctx.logger.error(err)
-    finally:
-        await ctx.send(sender, AgentHealth(agent_name="football_agent", status=status))
+# Include the protocol in the agent to enable the chat functionality
+# This allows the agent to send/receive messages and handle acknowledgements using the chat protocol
+agent1.include(chat_proto, publish_manifest=True)
 
-agent.include(health_protocol, publish_manifest=True)
-agent.include(chat_proto, publish_manifest=True)
-agent.include(struct_output_client_proto, publish_manifest=True)
-
-if __name__ == "__main__":
-    agent.run() 
+if __name__ == '__main__':
+    agent1.run()
