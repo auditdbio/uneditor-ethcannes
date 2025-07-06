@@ -2,9 +2,8 @@ import os
 import aiohttp
 from datetime import datetime
 from uuid import uuid4
-from dotenv import load_dotenv
 
-from uagents import Agent, Context
+from uagents import Agent, Context, Protocol
 from uagents_core.contrib.protocols.chat import (
     ChatAcknowledgement,
     ChatMessage,
@@ -13,16 +12,16 @@ from uagents_core.contrib.protocols.chat import (
 )
 
 # --- Load Configuration ---
-load_dotenv()
-SEED_PHRASE = os.getenv("SEED_PHRASE", "default_seed_phrase")
+SEED_PHRASE = os.getenv("SEED_PHRASE")
 AGENT_SERVER_URL = os.getenv("AGENT_SERVER_URL")
 AGENT_API_SECRET_KEY = os.getenv("AGENT_API_SECRET_KEY")
+
 
 # --- Initialize Agent ---
 agent = Agent(name="science_chat_client", seed=SEED_PHRASE)
 
 # --- Protocol Definition ---
-chat_proto = chat_protocol_spec
+chat_proto = Protocol(spec=chat_protocol_spec)
 
 # --- Helper Function for API Calls ---
 async def query_science_chat_api(chat_uuid: str, text: str, ctx: Context) -> str:
@@ -93,8 +92,8 @@ async def handle_acknowledgement(ctx: Context, sender: str, msg: ChatAcknowledge
 agent.include(chat_proto, publish_manifest=True)
 
 if __name__ == "__main__":
-    if not AGENT_SERVER_URL or not AGENT_API_SECRET_KEY:
-        print("ERROR: AGENT_SERVER_URL and AGENT_API_SECRET_KEY must be set in the environment.")
+    if not SEED_PHRASE or not AGENT_SERVER_URL or not AGENT_API_SECRET_KEY:
+        print("ERROR: SEED_PHRASE, AGENT_SERVER_URL, and AGENT_API_SECRET_KEY must be set in the environment.")
     else:
         print(f"Agent address: {agent.address}")
         print(f"Connecting to backend at: {AGENT_SERVER_URL}")
