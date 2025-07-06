@@ -20,6 +20,11 @@ class ChatClient:
             self.chat_histories[chat_uuid] = []
         return self.chat_histories[chat_uuid]
 
+    def add_message_to_history(self, chat_uuid: str, message: Dict[str, str]):
+        """Adds a message to the chat history without generating a response."""
+        history = self._get_or_create_history(chat_uuid)
+        history.append(message)
+
     async def get_response(self, chat_uuid: str, user_query: str, model: str) -> str:
         """
         Handles a single user query, gets a model response, and updates history.
@@ -31,14 +36,13 @@ class ChatClient:
             chat_uuid=chat_uuid,
             user_query=user_query,
             chat_history=history,
-            rag_top_k=3,
-            max_context_chars=16000
+            rag_top_k=3
         )
 
         assistant_response = await chat_completions(
             model=model,
             system_prompt=system_prompt,
-            user_prompt=user_query,
+            user_prompt=user_query
         )
 
         history.append({"role": "assistant", "content": assistant_response})
@@ -62,27 +66,4 @@ class ChatClient:
         await self.context_manager.add_messages(
             chat_uuid,
             [{"role": "system", "content": f"Reference document:\n{document_content}"}]
-        )
-
-    async def start_chat(self):
-        """
-        Starts the interactive command-line chat session.
-        """
-        while True:
-            try:
-                user_input = input("You: ").strip()
-                if user_input.lower() in ["exit", "quit"]:
-                    print("--- Chat session ended. ---")
-                    break
-                if not user_input:
-                    continue
-                
-                await self.get_response(user_input)
-
-            except (KeyboardInterrupt, EOFError):
-                print("\n--- Chat session ended. ---")
-                break
-            except Exception as e:
-                print(f"\nAn error occurred: {e}")
-                # Optionally, break the loop on error
-                # break 
+        ) 

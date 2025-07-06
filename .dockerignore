@@ -1,0 +1,22 @@
+# Python build artifacts, cache, and virtual environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+**/.venv/
+
+# Ignore local environment files - DO NOT commit .env files
+.env
+**/.env
+
+# Application-specific cache and temporary directories
+agent/agent_cache/
+agent/temp_downloads/
+
+# IDE and git directories
+.vscode/
+.idea/
+.git/
+.gitignore 

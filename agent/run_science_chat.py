@@ -1,8 +1,11 @@
 import asyncio
 import os
 from dotenv import load_dotenv
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
 
 from agent.science_chat import ScienceChatOrchestrator
+from models.chat import ChatClient
 
 # ANSI escape codes for colors
 USER_COLOR = "\033[94m"
@@ -27,7 +30,8 @@ async def main():
     if not check_env_vars():
         return
 
-    orchestrator = ScienceChatOrchestrator(model_name="grok-3-mini-high")
+    chat_client = ChatClient()
+    orchestrator = ScienceChatOrchestrator(chat_client=chat_client, model_name="grok-3-mini-high")
 
     print(f"\n{SYSTEM_COLOR}--- Science Chat Initialized ---{RESET_COLOR}")
     print(f"{SYSTEM_COLOR}Using model: {orchestrator.model}{RESET_COLOR}")
@@ -35,9 +39,13 @@ async def main():
     print(f"{SYSTEM_COLOR}To exit, type: /exit or /quit{RESET_COLOR}")
     print(f"{SYSTEM_COLOR}----------------------------------{RESET_COLOR}")
 
+    history = InMemoryHistory()
+    session = PromptSession(history=history)
+
     while True:
         try:
-            user_input = input(f"{USER_COLOR}You: {RESET_COLOR}").strip()
+            # Use prompt_toolkit's styling for the prompt, as raw ANSI codes can cause rendering issues.
+            user_input = (await session.prompt_async([('fg:ansibrightblue', 'You: ')])).strip()
 
             if user_input.lower() in ["/exit", "/quit"]:
                 print(f"{SYSTEM_COLOR}--- Chat session ended. ---{RESET_COLOR}")
@@ -46,7 +54,7 @@ async def main():
                 continue
 
             print(f"{SYSTEM_COLOR}Processing...{RESET_COLOR}", end='\r')
-            result = await orchestrator.process_input(user_input)
+            result = await orchestrator.process_input("console_chat", user_input)
             print(" " * 20, end='\r') # Clear the "Processing..." message
 
             if result["type"] == "chat":

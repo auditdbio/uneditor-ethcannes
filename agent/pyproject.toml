@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "agent"
 version = "0.1.0"
@@ -7,7 +11,10 @@ dependencies = [
     "aiohttp",
     "aiofiles",
     "jinja2",
-    "python-dotenv"
+    "python-dotenv",
+    "fastapi",
+    "uvicorn[standard]",
+    "prompt_toolkit"
 ]
 
 [project.scripts]
@@ -17,3 +24,6 @@ agent-template = "agent.main:main"
 scope_loader = { path = "../scope-loader" }
 taskman = { path = "../taskman" }
 models = { path = "../models" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent"]

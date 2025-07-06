@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # It's important to load environment variables before importing the context manager
 load_dotenv(dotenv_path='models/.env')
 
-from models.models.context import ChatContextManager
+from models.context import ChatContextManager
 
 async def main():
     """
@@ -65,8 +65,8 @@ async def main():
         chat_uuid=chat_id,
         user_query=new_user_query,
         chat_history=recent_chat_history,
-        rag_top_k=2,
-        max_context_chars=4000
+        rag_top_k=3,
+        max_context_chars=128000
     )
 
     # 4. Print the result
